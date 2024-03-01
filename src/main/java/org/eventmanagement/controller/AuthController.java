@@ -3,9 +3,7 @@ package org.eventmanagement.controller;
 
 import jakarta.validation.Valid;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.eventmanagement.dto.LoginRequest;
 import org.eventmanagement.dto.MessageResponse;
@@ -15,9 +13,6 @@ import org.eventmanagement.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,7 +30,6 @@ public class AuthController {
     public ResponseEntity<?> registerUser(@RequestBody @Valid UserRegistration userRegistrationRequest,
                                           BindingResult bindingResult) throws Exception {
 
-        String errorMessage = "Invalid input field: ";
         if (bindingResult.hasErrors()) {
             return ResponseEntity.badRequest().body(new MessageResponse("Input JSON is invalid"));
         }
@@ -55,6 +49,10 @@ public class AuthController {
         if (bindingResult.hasErrors()) {
             return ResponseEntity.badRequest().body(bindingResult);
         }
+
+        /*
+
+         */
         Optional<TokenResponse> tokenResponse = this.authService.signIn(loginRequest);
         return new ResponseEntity<>(tokenResponse.get(), HttpStatus.CREATED);
     }
