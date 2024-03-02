@@ -1,5 +1,6 @@
 package org.eventmanagement.dto;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
 import java.io.Serializable;
@@ -22,6 +23,10 @@ public class EventDto implements Serializable {
 
     private double ticketPrice;
 
+    @Min(value=1)
+    private int totalTickets;
+
+    @Min(value=1)
     private int availableTickets;
 
     private EventType eventType;
@@ -122,5 +127,13 @@ public class EventDto implements Serializable {
 
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public int getTotalTickets() {
+        return totalTickets;
+    }
+
+    public void setTotalTickets(int totalTickets) {
+        this.totalTickets = totalTickets;
     }
 }

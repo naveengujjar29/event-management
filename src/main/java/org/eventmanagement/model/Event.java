@@ -25,7 +25,9 @@ public class Event {
     private String name;
     private String venue;
     private Date eventDateTime;
+
     private double ticketPrice;
+    private int totalTickets;
     private int availableTickets;
     private EventType eventType;
 
@@ -129,5 +131,13 @@ public class Event {
 
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public int getTotalTickets() {
+        return totalTickets;
+    }
+
+    public void setTotalTickets(int totalTickets) {
+        this.totalTickets = totalTickets;
     }
 }
