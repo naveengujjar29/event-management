@@ -2,12 +2,13 @@ package org.eventmanagement.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
 
-import org.eventmanagement.enums.Roles;
+import org.eventmanagement.enums.Role;
 
 public class UserRegistration implements Serializable {
 
@@ -28,7 +29,10 @@ public class UserRegistration implements Serializable {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String confirmPassword;
 
-    private Roles role;
+    private Role role;
+
+    @NotNull
+    private Long mobileNumber;
 
     public String getEmail() {
         return email;
@@ -70,11 +74,19 @@ public class UserRegistration implements Serializable {
         this.confirmPassword = confirmPassword;
     }
 
-    public Roles getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(Roles role) {
+    public void setRole(Role role) {
         this.role = role;
+    }
+
+    public Long getMobileNumber() {
+        return mobileNumber;
+    }
+
+    public void setMobileNumber(Long mobileNumber) {
+        this.mobileNumber = mobileNumber;
     }
 }

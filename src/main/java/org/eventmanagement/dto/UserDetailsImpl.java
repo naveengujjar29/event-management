@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.eventmanagement.enums.Roles;
+import org.eventmanagement.enums.Role;
 import org.eventmanagement.model.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -16,12 +16,12 @@ public class UserDetailsImpl implements UserDetails {
 
     private String password;
 
-    private Roles role;
+    private Role role;
 
     private Collection<? extends GrantedAuthority> authorities;
 
     public UserDetailsImpl(String email, String password, Collection<? extends GrantedAuthority> authorities,
-                           Roles role) {
+                           Role role) {
         this.email = email;
         this.password = password;
         this.authorities = authorities;
@@ -71,7 +71,7 @@ public class UserDetailsImpl implements UserDetails {
         return true;
     }
 
-    public Roles getRole() {
+    public Role getRole() {
         return role;
     }
 }

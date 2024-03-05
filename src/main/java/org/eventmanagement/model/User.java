@@ -12,7 +12,7 @@ import jakarta.persistence.UniqueConstraint;
 
 import java.util.Date;
 
-import org.eventmanagement.enums.Roles;
+import org.eventmanagement.enums.Role;
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
 
@@ -37,7 +37,10 @@ public class User {
     private String password;
 
     @Column(name = "role")
-    private Roles role;
+    private Role role;
+
+    @Column(name = "mobileNumber")
+    private Long mobileNumber;
 
     @Basic
     @Generated(GenerationTime.INSERT)
@@ -85,11 +88,11 @@ public class User {
         this.password = password;
     }
 
-    public Roles getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(Roles role) {
+    public void setRole(Role role) {
         this.role = role;
     }
 
@@ -99,5 +102,13 @@ public class User {
 
     public void setCreatedDateTime(Date createdDateTime) {
         this.createdDateTime = createdDateTime;
+    }
+
+    public Long getMobileNumber() {
+        return mobileNumber;
+    }
+
+    public void setMobileNumber(Long mobileNumber) {
+        this.mobileNumber = mobileNumber;
     }
 }

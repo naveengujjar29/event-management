@@ -1,16 +1,16 @@
 package org.eventmanagement.dto;
 
 import java.io.Serializable;
-import java.util.List;
 
-import org.eventmanagement.enums.Roles;
+import org.eventmanagement.enums.Role;
 
 public class TokenResponse implements Serializable {
+
     private String token;
 
-    private Roles role;
+    private Role role;
 
-    public TokenResponse(String token, Roles roles) {
+    public TokenResponse(String token, Role roles) {
         this.token = token;
         this.role = roles;
     }
@@ -23,11 +23,11 @@ public class TokenResponse implements Serializable {
         this.token = token;
     }
 
-    public Roles getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(Roles role) {
+    public void setRole(Role role) {
         this.role = role;
     }
 }

@@ -10,7 +10,9 @@ import org.eventmanagement.dto.UserDetailsImpl;
 import org.eventmanagement.dto.UserRegistration;
 import org.eventmanagement.exception.UserAlreadyExistException;
 import org.eventmanagement.model.User;
+import org.eventmanagement.model.Wallet;
 import org.eventmanagement.repository.UserRepository;
+import org.eventmanagement.repository.WalletRepository;
 import org.eventmanagement.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,8 +21,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 public class AuthService {
 
     @Autowired
@@ -28,6 +32,9 @@ public class AuthService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private WalletRepository walletRepository;
 
     @Autowired
     private PasswordEncoder encoder;
@@ -42,7 +49,12 @@ public class AuthService {
         checkForDuplicateUserRecord(userRegistrationRequest);
         userRegistrationRequest.setPassword(encoder.encode(userRegistrationRequest.getPassword()));
         User user = (User) converter.convert(userRegistrationRequest, User.class);
-        User savedUser = this.userRepository.save(user);
+        User savedUser = this.userRepository.saveAndFlush(user);
+        Wallet wallet = new Wallet();
+        wallet.setUserId(savedUser.getId());
+        wallet.setBalance(1000);
+        wallet.setUserEmail(savedUser.getEmail());
+        this.walletRepository.save(wallet);
         UserRegistration savedUserDto = (UserRegistration) this.converter.convert(savedUser, UserRegistration.class);
         return Optional.of(savedUserDto);
     }
