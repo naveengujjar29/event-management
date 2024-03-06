@@ -11,6 +11,7 @@ import org.eventmanagement.converter.ObjectConverter;
 import org.eventmanagement.dto.BookingDto;
 import org.eventmanagement.dto.BookingEventDetailsDto;
 import org.eventmanagement.dto.EmailDetailsDto;
+import org.eventmanagement.dto.EventDto;
 import org.eventmanagement.dto.PaymentMethod;
 import org.eventmanagement.dto.TransactionStatus;
 import org.eventmanagement.dto.UserDetailsImpl;
@@ -105,7 +106,7 @@ public class BookingService {
         BookingDto savedBookingDto = (BookingDto) this.objectConverter.convert(savedBooking, BookingDto.class);
         savedBookingDto.setEventDetails(bookingEventDetailsDto);
         if (savedBookingDto.getBookingStatus().equals(BookingStatus.ACCEPTED)) {
-            sendMailOfBooking(savedBookingDto);
+            sendMailOfBooking(savedBookingDto, "Ticket Confirmation", "email-template.ftl");
         }
         return Optional.of(savedBookingDto);
     }
@@ -230,11 +231,14 @@ public class BookingService {
         return Optional.of(bookingDto);
     }
 
-    public void cancelActiveBookingsIfEventCancelled(List<Booking> bookings) {
+    public void cancelActiveBookingsIfEventCancelled(List<Booking> bookings, BookingEventDetailsDto eventDto) {
         LoggedInUserIdentity loggedInUserIdentity = getLoggedInUserIdentity();
         for (Booking booking : bookings) {
+            BookingDto bookingDto = (BookingDto) this.objectConverter.convert(booking, BookingDto.class);
             cancelAndRefundAmountIfWalletPaymentUsed(loggedInUserIdentity, booking);
             this.bookingRepository.save(booking);
+            bookingDto.setEventDetails(eventDto);
+            sendMailOfBooking(bookingDto, "Event Cancelled", "event-cancelled-email-template.ftl");
         }
     }
 
@@ -255,7 +259,6 @@ public class BookingService {
 
         Event event = this.eventRepository.findById(booking.getEventId()).orElseThrow(() ->
                 new EntityDoesNotExistException("Event with this id" + booking.getEventId() + " does not exist."));
-
         DateTime target = new DateTime(event.getEventDateTime(), DateTimeZone.UTC);
         DateTime currentDateTime = DateTime.now(DateTimeZone.UTC);
         Duration duration = new Duration(currentDateTime, target);
@@ -263,22 +266,24 @@ public class BookingService {
 
         if (duration.isShorterThan(fortyEightHours)) {
             LOGGER.error("You can cancel the booking for the event only before 48 hours.");
-            throw new BadRequestException("YYou can cancel the booking for the event only before 48 hours.");
+            throw new BadRequestException("You can cancel the booking for the event only before 48 hours.");
         }
 
         cancelAndRefundAmountIfWalletPaymentUsed(loggedInUserIdentity, booking);
         Booking updatedBooking = this.bookingRepository.save(booking);
+        BookingEventDetailsDto bookingEventDetailsDto = (BookingEventDetailsDto) this.objectConverter.convert(event,
+                BookingEventDetailsDto.class);
         BookingDto bookingDto = (BookingDto) this.objectConverter.convert(updatedBooking, BookingDto.class);
+        bookingDto.setEventDetails(bookingEventDetailsDto);
+        sendMailOfBooking(bookingDto, "Ticket Cancellation", "cancel-booking-email-template.ftl");
         return Optional.of(bookingDto);
     }
 
     public List<BookingDto> getUserBookings() {
         LoggedInUserIdentity loggedInUserIdentity = getLoggedInUserIdentity();
         List<Booking> bookings = this.bookingRepository.findAllByBookedBy(loggedInUserIdentity.whoAmI);
-        List<BookingDto> savedBookings =
-                bookings.stream().map(booking -> (BookingDto) this.objectConverter.convert(booking,
-                        BookingDto.class)).collect(Collectors.toList());
-        return savedBookings;
+        return bookings.stream().map(booking -> (BookingDto) this.objectConverter.convert(booking,
+                BookingDto.class)).collect(Collectors.toList());
     }
 
     private void cancelAndRefundAmountIfWalletPaymentUsed(LoggedInUserIdentity loggedInUserIdentity, Booking booking) {
@@ -296,11 +301,13 @@ public class BookingService {
         }
     }
 
-    public void sendMailOfBooking(BookingDto savedBookingDto) {
+
+    public void sendMailOfBooking(BookingDto savedBookingDto, String subject,
+                                  String emailTemplateName) {
         EmailDetailsDto emailDetailDto = new EmailDetailsDto();
         emailDetailDto.setTo(savedBookingDto.getBookingUserEmail());
-        emailDetailDto.setSubject("Ticket Confirmation.");
-        emailDetailDto.setTemplateName("email-template.ftl");
+        emailDetailDto.setSubject(subject);
+        emailDetailDto.setTemplateName(emailTemplateName);
         // Prepare model for the template
         Map<String, Object> model = new HashMap<>();
         model.put("eventname", savedBookingDto.getEventDetails().getName());
@@ -309,6 +316,7 @@ public class BookingService {
         model.put("bookingid", savedBookingDto.getBookingId());
         model.put("bookingNumTickets", savedBookingDto.getNumberOfTickets());
         emailDetailDto.setModel(model);
+
         try {
             // Send the email
             emailService.sendEmail(emailDetailDto);

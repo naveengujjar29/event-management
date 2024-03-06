@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.eventmanagement.converter.ObjectConverter;
+import org.eventmanagement.dto.BookingEventDetailsDto;
 import org.eventmanagement.dto.EventDto;
 import org.eventmanagement.dto.UserDetailsImpl;
 import org.eventmanagement.enums.BookingStatus;
@@ -77,6 +78,7 @@ public class EventService {
             savedEvent.get().setEventType(eventDto.getEventType());
             savedEvent.get().setAvailableTickets(eventDto.getAvailableTickets());
             savedEvent.get().setTicketPrice(eventDto.getTicketPrice());
+            savedEvent.get().setEventDateTime(eventDto.getEventDateTime());
             Event updatedSavedEvent = this.eventRepository.saveAndFlush(savedEvent.get());
             EventDto savedEventDto = (EventDto) this.objectConverter.convert(updatedSavedEvent, EventDto.class);
             return Optional.of(savedEventDto);
@@ -101,7 +103,8 @@ public class EventService {
             //Initiate the Refunds.
             List<Booking> activeBookingAssociatedWithEvent =
                     this.bookingRepository.findAllByEventIdAndBookingStatus(id, BookingStatus.ACCEPTED);
-            this.bookingService.cancelActiveBookingsIfEventCancelled(activeBookingAssociatedWithEvent);
+            this.bookingService.cancelActiveBookingsIfEventCancelled(activeBookingAssociatedWithEvent,
+                    (BookingEventDetailsDto) this.objectConverter.convert(savedEvent.get(), BookingEventDetailsDto.class));
             Event updatedSavedEvent = this.eventRepository.saveAndFlush(savedEvent.get());
             EventDto savedEventDto = (EventDto) this.objectConverter.convert(updatedSavedEvent, EventDto.class);
             return Optional.of(savedEventDto);

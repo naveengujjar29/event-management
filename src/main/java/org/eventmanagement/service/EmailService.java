@@ -3,11 +3,7 @@ package org.eventmanagement.service;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-
-import java.io.IOException;
-import java.util.Map;
 
 import org.eventmanagement.dto.EmailDetailsDto;
 import org.slf4j.Logger;
