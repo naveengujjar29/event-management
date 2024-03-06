@@ -11,4 +11,5 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public interface WalletRepository extends JpaRepository<Wallet, Long> {
     Optional<Wallet> findByUserId(Long id);
+    Optional<Wallet> findByUserEmail(String id);
 }

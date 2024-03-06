@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.eventmanagement.dto.EventDto;
 import org.eventmanagement.dto.MessageResponse;
+import org.eventmanagement.exception.BadRequestException;
 import org.eventmanagement.service.EventService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -79,7 +80,7 @@ public class EventController {
 
     @PostMapping("/{eventId}/cancel")
     @PreAuthorize("hasRole('EVENT_MANAGER')")
-    public ResponseEntity<?> cancelEvent(@PathVariable long eventId) {
+    public ResponseEntity<?> cancelEvent(@PathVariable long eventId) throws BadRequestException {
         Optional<EventDto> savedEventDto = this.eventService.cancelEvent(eventId);
         return new ResponseEntity<>(savedEventDto.get(), HttpStatus.OK);
     }

@@ -1,22 +1,32 @@
-# Welcome to Event Management Project 
+# Welcome to Event Management Project
 
 This event management project is spring boot based implementation project which is aiming to cover the event management functionality.
 
 This functionality aims three personas:
 
- 1. Customer
- 2. Event Manager
- 3. Ticket officer
+1. Customer
+2. Event Manager
+3. Ticket officer
+
+## How to setup or run the project on local system.
+
+- Download the Java 17 and configured.
+- Download the Apache Maven from https://maven.apache.org/download.cgi site.
+- Unzip the Apache Maven in any folder.
+- Run the `mvn clean install` command from the directory where this branch code has been checked out.
+- Go to `target` directory.
+- There should be a jar `event-management-0.0.1-SNAPSHOT.jar` in `target` directory.
+- Run the command `java -jar event-management-0.0.1-SNAPSHOT.jar` command to start the project the embedded server.
+
+### Testing the APIs
 
 ## Booking Flow Step By Step
 
 We are going to cover step by steps APIs available to book the event.
 
- 1. Sign Up and Sign In of the Customer
-	
+1. Sign Up and Sign In of the Customer
 
-
-> First sign up using the **/api/v1/auth/signup** API with below payload. It will create the user with email id and role as CUSTOMER.
+> First sign up using the  POST **/api/v1/auth/signup**  API with below payload. It will create the user with email id and role as CUSTOMER.
 
        {
         	"email": "naveenkarhana29@gmail.com",
@@ -27,11 +37,11 @@ We are going to cover step by steps APIs available to book the event.
         	"mobileNumber": "123456789",
         	"role": "ROLE_CUSTOMER"
         }
-       
- 
 
-> Now Sign in using this user email and password and get the JWT token using 
-> **/api/v1/auth/signin** API
+
+
+> Now Sign in using this user email and password and get the JWT token using
+> POST  **/api/v1/auth/signin** API
 
     {
     	"email": "naveenkarhana29@gmail.com",
@@ -44,8 +54,8 @@ This will result in JWT token in response like below.
     "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJuYXZlZW5rYXJoYW5hMjlAZ21haWwuY29tIiwiaWF0IjoxNzA5NjU1NjQ0LCJleHAiOjE3MDk3NDIwNDR9.5kqxxVIx9C4Qe41BSMSdJOfQYtX8LPXwteX4-xUIoZQ", 
     "role": "ROLE_CUSTOMER"
     }
-    
- 2. Sign Up and Sign In of the Event Manager
+
+2. Sign Up and Sign In of the Event Manager
 
 > Signup and Sign In using the same API with different Email ID and role as ROLE_EVENT_MANAGER
 
@@ -75,10 +85,10 @@ Now we will use these 2 tokens for further API invocation linked with User and E
 ## Managing  the Events
 As managing the events is the responsibility of Event Manager, hence we will use the Event Manager JWT Token to create the event first.
 
- 1. Create the Event
- 
+1. Create the Event
 
-> Invoke the /api/v1/events API to create the event with event manager  token, We have to pass this token in **Authorization** header with **Bearer** prefix.
+
+> Invoke the POST **/api/v1/events** API to create the event with event manager  token, We have to pass this token in **Authorization** header with **Bearer** prefix.
 
 
     {    
@@ -109,11 +119,11 @@ This will create the Event with event ID.
         "lastModifiedDateTime": "2024-03-05T22:09:40.000+00:00"
     }
 
-## Make a Booking of this Event from Customer
+## Make a Booking of this Event as Customer
 
-> A user profile can be get using the the API - /api/v1/users/profile
+> A user profile can be get using the API - GET  **/api/v1/users/profile**
 
-By default any user signed up will have 1000 in the account wallet.
+By default, any user signed up will have 1000 in the account wallet.
 
     {
         "id": 17,
@@ -128,9 +138,9 @@ By default any user signed up will have 1000 in the account wallet.
         }
     }
 
-2. Make the Booking for the event ID 9 which has been created above using the API 
+2. Make the Booking for the event ID 9 which has been created above using the API
 
-> /api/v1/bookings
+> POST **/api/v1/bookings**
 
     {
     	"bookingUserEmail": "naveenkarhana29@gmail.com",
@@ -141,8 +151,8 @@ By default any user signed up will have 1000 in the account wallet.
     		"paymentMethod": "WALLET"
     	}
     }
-    
-This will give the response of booking with booking Id and transaction details like below.
+
+This will give the response of booking with booking ID and transaction details like below.
 
     {
         "bookingId": "88260175-e761-4ac4-bb8a-71a09ebc3d30",
@@ -242,4 +252,48 @@ On Ticket confirmation email will be also sent on bookingUserEmail if SMTP is co
     Best regards,
     
     The Event Management Team
+
+## To Verify the Booking ID
+Booking ID can be verified after invoking the GET **/api/v1/bookings/{bookingId}**  API.
+
+## Cancel the Booking
+To cancel a booking which is booked by you, use the below API.
+
+- If booking is already cancelled, then you can't cancelled it again.
+- Booking can be cancelled only before 48 hours.
+
+> POST **/api/v1/bookings/88260175-e761-4ac4-bb8a-71a09ebc3d30/cancel**
+> This will refund the booking amount back to your wallet and can be verified using
+> **/api/v1/users/profile** GET API.
+
+    {
+        "bookingId": "88260175-e761-4ac4-bb8a-71a09ebc3d30",
+        "bookingUserEmail": "naveenkarhana29@gmail.com",
+        "bookingMobileNumber": 992352,
+        "bookedBy": "naveenkarhana29@gmail.com",
+        "bookingStatus": "CANCELLED",
+        "eventId": 9,
+        "numberOfTickets": 2,
+        "bookingDateTime": "2024-03-05T16:48:32.608+00:00",
+        "transactionDetail": {
+            "transactionId": "83a0d875-8b95-499f-b6c8-493527d6635c",
+            "amount": 400.0,
+            "transactionStatus": "REFUNDED",
+            "paymentMethod": "WALLET",
+            "transactionDateTime": "2024-03-05T22:18:32.000+00:00",
+            "transactionUpdateDateTime": "2024-03-06T14:02:51.000+00:00"
+        },
+        "createdDateTime": "2024-03-05T22:18:32.000+00:00",
+        "lastModifiedDateTime": "2024-03-06T14:02:51.000+00:00"
+    }
+
+## Cancel the Event
+To cancel an event, invoke the **POST /api/v1/events/{eventId}/cancel** API.
+
+This will cancel the event and all associated booking will be refunded if payment is done by WALLET.
+Refund will be initiated to Wallets which are associated with booking.
+
+For e.g. - http://localhost:8081/api/v1/events/9/cancel
+
+
 

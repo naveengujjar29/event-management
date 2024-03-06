@@ -43,11 +43,19 @@ public class BookingController {
         return new ResponseEntity<>(savedBookingDto.get(), HttpStatus.CREATED);
     }
 
-    @GetMapping("/{bookingId}")
+    @GetMapping(value = "/{bookingId}")
     @PreAuthorize("hasRole('EVENT_MANAGER') or hasRole('TICKET_OFFICER') or hasRole('CUSTOMER')")
     public ResponseEntity<?> getBookingById(@PathVariable String bookingId) throws BadRequestException,
             EntityDoesNotExistException {
         Optional<BookingDto> savedBookingDto = this.bookingService.getBookingDetails(bookingId);
+        return new ResponseEntity<>(savedBookingDto.get(), HttpStatus.CREATED);
+    }
+
+    @PostMapping("/{bookingId}/cancel")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<?> cancelBookingById(@PathVariable String bookingId) throws BadRequestException,
+            EntityDoesNotExistException {
+        Optional<BookingDto> savedBookingDto = this.bookingService.cancelBookingById(bookingId);
         return new ResponseEntity<>(savedBookingDto.get(), HttpStatus.CREATED);
     }
 

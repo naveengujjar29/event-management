@@ -1,12 +1,18 @@
 package org.eventmanagement.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.eventmanagement.converter.ObjectConverter;
 import org.eventmanagement.dto.EventDto;
 import org.eventmanagement.dto.UserDetailsImpl;
+import org.eventmanagement.enums.BookingStatus;
 import org.eventmanagement.enums.EventState;
+import org.eventmanagement.exception.BadRequestException;
+import org.eventmanagement.exception.EntityDoesNotExistException;
+import org.eventmanagement.model.Booking;
 import org.eventmanagement.model.Event;
+import org.eventmanagement.repository.BookingRepository;
 import org.eventmanagement.repository.EventRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -25,6 +31,12 @@ public class EventService {
 
     @Autowired
     private EventRepository eventRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private BookingService bookingService;
 
     public Optional<EventDto> createEvent(EventDto eventDto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -79,10 +91,17 @@ public class EventService {
         }
     }
 
-    public Optional<EventDto> cancelEvent(long id) {
+    public Optional<EventDto> cancelEvent(long id) throws BadRequestException {
         Optional<Event> savedEvent = this.eventRepository.findById(id);
+        if (savedEvent.get().getEventState().equals(EventState.CANCELLED)) {
+            throw new BadRequestException("Event is already cancelled.");
+        }
         if (savedEvent.isPresent()) {
             savedEvent.get().setEventState(EventState.CANCELLED);
+            //Initiate the Refunds.
+            List<Booking> activeBookingAssociatedWithEvent =
+                    this.bookingRepository.findAllByEventIdAndBookingStatus(id, BookingStatus.ACCEPTED);
+            this.bookingService.cancelActiveBookingsIfEventCancelled(activeBookingAssociatedWithEvent);
             Event updatedSavedEvent = this.eventRepository.saveAndFlush(savedEvent.get());
             EventDto savedEventDto = (EventDto) this.objectConverter.convert(updatedSavedEvent, EventDto.class);
             return Optional.of(savedEventDto);

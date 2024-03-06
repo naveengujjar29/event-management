@@ -61,39 +61,37 @@ public class BookingService {
     @Autowired
     private EmailService emailService;
 
+    private record LoggedInUserIdentity(String whoAmI, Role role) {
+    }
+
     @Transactional(rollbackFor = {Exception.class})
     public Optional<BookingDto> bookEventTicket(BookingDto bookingDto) throws EntityDoesNotExistException,
             BadRequestException {
         LOGGER.debug("Ticket booking has been started.");
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String whoAmI = "";
-        Role role = Role.ROLE_CUSTOMER;
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
-            whoAmI = ((UserDetailsImpl) authentication.getPrincipal()).getUsername();
-            role = ((UserDetailsImpl) authentication.getPrincipal()).getRole();
-        }
 
-        if (role.equals(Role.ROLE_CUSTOMER) && bookingDto.getTransactionDetail().getPaymentMethod().equals(PaymentMethod.CASH)) {
+        LoggedInUserIdentity loggedInUser = getLoggedInUserIdentity();
+
+        if (loggedInUser.role().equals(Role.ROLE_CUSTOMER) && bookingDto.getTransactionDetail().getPaymentMethod().equals(PaymentMethod.CASH)) {
             throw new BadRequestException("CUSTOMER can not purchase the tickets with Payment Method CASH.");
         }
 
-        LOGGER.debug("User " + whoAmI + " is performing the booking operation with role " + role.toString());
+        LOGGER.debug("User " + loggedInUser.whoAmI() + " is performing the booking operation with role " + loggedInUser.role());
         // First check for Events validity, exist or not?
-        validateEvent(bookingDto.getEventId(), role);
+        validateEvent(bookingDto.getEventId(), loggedInUser.role());
 
         //Validate if we have sufficient number of tickets or not for this event
         checkForAvailableTickets(bookingDto.getEventId(), bookingDto.getNumberOfTickets());
 
         //Validate if User has the required amount in Wallet
-        checkForWalletBalanceIfWalletPaymentIsUsed(bookingDto, role, whoAmI);
+        checkForWalletBalanceIfWalletPaymentIsUsed(bookingDto, loggedInUser.role(), loggedInUser.whoAmI());
 
         bookingByUPIOrCard(bookingDto);
 
         // set the identity from JWT token who is performing this booking.
-        bookingDto.setBookedBy(whoAmI);
+        bookingDto.setBookedBy(loggedInUser.whoAmI());
 
         //populateBookingUserDetails
-        populateBookingUserDetails(bookingDto, role, whoAmI);
+        populateBookingUserDetails(bookingDto, loggedInUser.role(), loggedInUser.whoAmI());
 
         Event event =
                 this.eventRepository.findById(bookingDto.getEventId()).orElseThrow(() -> new EntityDoesNotExistException("Event ID does not exist"));
@@ -110,6 +108,18 @@ public class BookingService {
             sendMailOfBooking(savedBookingDto);
         }
         return Optional.of(savedBookingDto);
+    }
+
+    private static LoggedInUserIdentity getLoggedInUserIdentity() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String whoAmI = "";
+        Role role = Role.ROLE_CUSTOMER;
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
+            whoAmI = ((UserDetailsImpl) authentication.getPrincipal()).getUsername();
+            role = ((UserDetailsImpl) authentication.getPrincipal()).getRole();
+        }
+        LoggedInUserIdentity result = new LoggedInUserIdentity(whoAmI, role);
+        return result;
     }
 
     private void bookingByUPIOrCard(BookingDto bookingDto) {
@@ -220,6 +230,72 @@ public class BookingService {
         return Optional.of(bookingDto);
     }
 
+    public void cancelActiveBookingsIfEventCancelled(List<Booking> bookings) {
+        LoggedInUserIdentity loggedInUserIdentity = getLoggedInUserIdentity();
+        for (Booking booking : bookings) {
+            cancelAndRefundAmountIfWalletPaymentUsed(loggedInUserIdentity, booking);
+            this.bookingRepository.save(booking);
+        }
+    }
+
+    public Optional<BookingDto> cancelBookingById(String bookingId) throws EntityDoesNotExistException,
+            BadRequestException {
+        Booking booking =
+                this.bookingRepository.findById(UUID.fromString(bookingId)).orElseThrow(() -> new EntityDoesNotExistException("Entity does not exist for this booking ID" + bookingId));
+
+        LoggedInUserIdentity loggedInUserIdentity = getLoggedInUserIdentity();
+
+        if (!booking.getBookedBy().equals(loggedInUserIdentity.whoAmI)) {
+            throw new BadRequestException("You can't cancel this booking as it is booked by another person: " + booking.getBookedBy());
+        }
+
+        if (booking.getBookingStatus().equals(BookingStatus.CANCELLED)) {
+            throw new BadRequestException("Booking has been already cancelled.");
+        }
+
+        Event event = this.eventRepository.findById(booking.getEventId()).orElseThrow(() ->
+                new EntityDoesNotExistException("Event with this id" + booking.getEventId() + " does not exist."));
+
+        DateTime target = new DateTime(event.getEventDateTime(), DateTimeZone.UTC);
+        DateTime currentDateTime = DateTime.now(DateTimeZone.UTC);
+        Duration duration = new Duration(currentDateTime, target);
+        Duration fortyEightHours = Duration.standardHours(48);
+
+        if (duration.isShorterThan(fortyEightHours)) {
+            LOGGER.error("You can cancel the booking for the event only before 48 hours.");
+            throw new BadRequestException("YYou can cancel the booking for the event only before 48 hours.");
+        }
+
+        cancelAndRefundAmountIfWalletPaymentUsed(loggedInUserIdentity, booking);
+        Booking updatedBooking = this.bookingRepository.save(booking);
+        BookingDto bookingDto = (BookingDto) this.objectConverter.convert(updatedBooking, BookingDto.class);
+        return Optional.of(bookingDto);
+    }
+
+    public List<BookingDto> getUserBookings() {
+        LoggedInUserIdentity loggedInUserIdentity = getLoggedInUserIdentity();
+        List<Booking> bookings = this.bookingRepository.findAllByBookedBy(loggedInUserIdentity.whoAmI);
+        List<BookingDto> savedBookings =
+                bookings.stream().map(booking -> (BookingDto) this.objectConverter.convert(booking,
+                        BookingDto.class)).collect(Collectors.toList());
+        return savedBookings;
+    }
+
+    private void cancelAndRefundAmountIfWalletPaymentUsed(LoggedInUserIdentity loggedInUserIdentity, Booking booking) {
+        booking.setBookingStatus(BookingStatus.CANCELLED);
+        booking.getTransactionDetail().setTransactionStatus(TransactionStatus.REFUNDED);
+        if (booking.getTransactionDetail().getPaymentMethod().equals(PaymentMethod.WALLET)) {
+            Optional<Wallet> wallet = this.walletRepository.findByUserEmail(booking.getBookedBy());
+            if (wallet.isPresent()) {
+                double bookingAmount = booking.getTransactionDetail().getAmount();
+                double currentWalletAmount = wallet.get().getBalance();
+                double totalWalletAmount = currentWalletAmount + bookingAmount;
+                wallet.get().setBalance(totalWalletAmount);
+                this.walletRepository.saveAndFlush(wallet.get());
+            }
+        }
+    }
+
     public void sendMailOfBooking(BookingDto savedBookingDto) {
         EmailDetailsDto emailDetailDto = new EmailDetailsDto();
         emailDetailDto.setTo(savedBookingDto.getBookingUserEmail());
@@ -239,18 +315,5 @@ public class BookingService {
         } catch (Exception e) {
             System.err.println("Error sending email: " + e.getMessage());
         }
-    }
-
-    public List<BookingDto> getUserBookings() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String whoAmI = "";
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
-            whoAmI = ((UserDetailsImpl) authentication.getPrincipal()).getUsername();
-        }
-        List<Booking> bookings = this.bookingRepository.findAllByBookedBy(whoAmI);
-        List<BookingDto> savedBookings =
-                bookings.stream().map(booking -> (BookingDto) this.objectConverter.convert(booking,
-                        BookingDto.class)).collect(Collectors.toList());
-        return savedBookings;
     }
 }
