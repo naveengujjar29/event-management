@@ -287,6 +287,9 @@ To cancel a booking which is booked by you, use the below API.
         "lastModifiedDateTime": "2024-03-06T14:02:51.000+00:00"
     }
 
+An email will be sent with cancellation confirmation on booking id.
+![alt text](https://github.com/naveengujjar29/event-management/blob/master/src/main/resources/templates/booking-cancel.png?raw=true)
+
 ## Cancel the Event
 To cancel an event, invoke the **POST /api/v1/events/{eventId}/cancel** API.
 
@@ -294,6 +297,10 @@ This will cancel the event and all associated booking will be refunded if paymen
 Refund will be initiated to Wallets which are associated with booking.
 
 For e.g. - http://localhost:8081/api/v1/events/9/cancel
+
+A mail will be sent as shown in below image.
+
+![alt text](https://github.com/naveengujjar29/event-management/blob/master/src/main/resources/templates/event-cancel.png?raw=true)
 
 
 
