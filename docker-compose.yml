@@ -1,7 +1,8 @@
 version: "3"
 services:
   api-server:
-    container_name: urlshortener-springboot
+    container_name: event-management-container
+    image: event-management-application
     build:
       context: .
       dockerfile: eventmanagement-api.Dockerfile
@@ -10,9 +11,11 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - my-network
+      - my-network-naveen
     depends_on:
-      - event-management-application-db
+      event-management-application-db:
+        condition: service_healthy
+
 
   event-management-application-db:
     container_name: eventmanagementdb-container
@@ -20,12 +23,23 @@ services:
       context: .
       dockerfile: db.Dockerfile
     networks:
-      - my-network
+      - my-network-naveen
     environment:
       - MYSQL_ROOT_PASSWORD=Temp123
       - MYSQL_DATABASE=eventdb
     ports:
       - '3306:3306'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      timeout: 10s
+    volumes:
+      - mysql-data:/var/lib/mysql
 
 networks:
-  my-network:
+  my-network-naveen:
+
+volumes:
+  mysql-data:
+    driver: local
