@@ -1,3 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: event
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,7 +22,7 @@ spec:
           image: mysql:8.0
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: "Temp123"
+              value: Temp123456
             - name: MYSQL_DATABASE
               value: "eventdb"
           ports:
@@ -27,7 +32,8 @@ spec:
               mountPath: /var/lib/mysql
       volumes:
         - name: mysql-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: mysql-pvc
 ---
 apiVersion: v1
 kind: Service
