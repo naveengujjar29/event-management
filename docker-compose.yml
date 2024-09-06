@@ -1,0 +1,31 @@
+version: "3"
+services:
+  api-server:
+    container_name: urlshortener-springboot
+    build:
+      context: .
+      dockerfile: eventmanagement-api.Dockerfile
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://eventmanagementdb-container:3306/eventdb?allowPublicKeyRetrieval=true&useSSL=false
+    ports:
+      - "8080:8080"
+    networks:
+      - my-network
+    depends_on:
+      - event-management-application-db
+
+  event-management-application-db:
+    container_name: eventmanagementdb-container
+    build:
+      context: .
+      dockerfile: db.Dockerfile
+    networks:
+      - my-network
+    environment:
+      - MYSQL_ROOT_PASSWORD=Temp123
+      - MYSQL_DATABASE=eventdb
+    ports:
+      - '3306:3306'
+
+networks:
+  my-network:
